@@ -30,7 +30,6 @@ type Collector struct {
 	dutyCycle   *prometheus.GaugeVec
 	powerUsage  *prometheus.GaugeVec
 	temperature *prometheus.GaugeVec
-	fanSpeed    *prometheus.GaugeVec
 }
 
 func NewCollector() *Collector {
@@ -81,15 +80,7 @@ func NewCollector() *Collector {
 				Help:      "Temperature of the GPU device in celsius",
 			},
 			labels,
-		),
-		fanSpeed: prometheus.NewGaugeVec(
-			prometheus.GaugeOpts{
-				Namespace: namespace,
-				Name:      "fanspeed_percent",
-				Help:      "Fanspeed of the GPU device as a percent of its maximum",
-			},
-			labels,
-		),
+		)
 	}
 }
 
@@ -100,7 +91,6 @@ func (c *Collector) Describe(ch chan<- *prometheus.Desc) {
 	c.dutyCycle.Describe(ch)
 	c.powerUsage.Describe(ch)
 	c.temperature.Describe(ch)
-	c.fanSpeed.Describe(ch)
 }
 
 func (c *Collector) Collect(ch chan<- prometheus.Metric) {
@@ -113,7 +103,6 @@ func (c *Collector) Collect(ch chan<- prometheus.Metric) {
 	c.dutyCycle.Reset()
 	c.powerUsage.Reset()
 	c.temperature.Reset()
-	c.fanSpeed.Reset()
 
 	numDevices, err := gonvml.DeviceCount()
 	if err != nil {
@@ -178,20 +167,12 @@ func (c *Collector) Collect(ch chan<- prometheus.Metric) {
 		} else {
 			c.temperature.WithLabelValues(minor, uuid, name).Set(float64(temperature))
 		}
-
-		fanSpeed, err := dev.FanSpeed()
-		if err != nil {
-			log.Printf("FanSpeed() error: %v", err)
-		} else {
-			c.fanSpeed.WithLabelValues(minor, uuid, name).Set(float64(fanSpeed))
-		}
 	}
 	c.usedMemory.Collect(ch)
 	c.totalMemory.Collect(ch)
 	c.dutyCycle.Collect(ch)
 	c.powerUsage.Collect(ch)
 	c.temperature.Collect(ch)
-	c.fanSpeed.Collect(ch)
 }
 
 func main() {
